@@ -1,0 +1,51 @@
+#This is supposedly the maximum timeout allowed for the entire build (24 hours)
+timeout: 1440s
+
+steps:
+  #Run the unit and integration tests
+  - name: 'gradle:6.3-jdk14'
+    entrypoint: gradle
+    args: ['test']
+
+  #Run static analysis
+  - name: 'gradle:6.3-jdk13'
+    entrypoint: gradle
+    args: ['sonarqube']
+
+  #Build the executable jar
+  - name: 'gradle:6.3-jdk14'
+    entrypoint: gradle
+    args: ['bootJar']
+
+  #Build the docker image
+  - name: 'gcr.io/cloud-builders/docker'
+    args: ["build", "-t", "gcr.io/$PROJECT_ID/demo:$COMMIT_SHA", "--build-arg=JAR_FILE=build/libs/demo-0.0.1-SNAPSHOT.jar", "."]
+
+  #Push the image to the GCP Container Registry
+  - name: 'gcr.io/cloud-builders/docker'
+    args: ['push', 'gcr.io/$PROJECT_ID/demo:$COMMIT_SHA']
+
+  #Deploy container to GCP Cloud Run
+  - name: 'gcr.io/cloud-builders/gcloud'
+    args:
+      - 'run'
+      - 'deploy'
+      - 'demo'
+      - '--image'
+      - 'gcr.io/$PROJECT_ID/demo:$COMMIT_SHA'
+      - '--region'
+      - 'us-central1'
+      - '--platform'
+      - 'managed'
+      - '--allow-unauthenticated'
+
+  #Run UI tests
+  - name: 'cypress/included:3.4.0'
+    dir: 'src/test/java/com/termalabs/demo/ui'
+    entrypoint: 'bash'
+    args:
+      - '-c'
+      - |
+         apt-get update \
+         && npm install \
+         && $(npm bin)/cypress run

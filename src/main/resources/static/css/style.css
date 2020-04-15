@@ -1,0 +1,16 @@
+body {
+    background-color: #ddd;
+}
+#container {
+    text-align: center;
+}
+
+#container h1 {
+    background-color: #eee;
+    border: solid thin black;
+    box-sizing: border-box;
+    display:inline-block;
+    padding: 20px;
+    box-shadow: 0 3px 4px #ccc;
+    border-radius: 5px;
+}
